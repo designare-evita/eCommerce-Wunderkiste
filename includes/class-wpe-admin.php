@@ -79,6 +79,19 @@ class WPE_Admin {
             )
         );
 
+        // Image Resizer aktivieren
+        add_settings_field(
+            'enable_image_resizer',
+            __( 'Image Resizer 800px', 'woo-product-extras' ),
+            array( $this, 'checkbox_field_callback' ),
+            'woo-product-extras',
+            'wpe_main_section',
+            array(
+                'id'          => 'enable_image_resizer',
+                'description' => __( 'Fügt einen Button in der Mediathek hinzu, um Bilder auf max. 800px zu skalieren.', 'woo-product-extras' )
+            )
+        );
+
         // CSS Bereich
         add_settings_section(
             'wpe_css_section',
@@ -158,6 +171,7 @@ class WPE_Admin {
         // Checkboxen
         $sanitized['enable_price_on_request'] = ! empty( $input['enable_price_on_request'] ) ? 1 : 0;
         $sanitized['enable_disable_shipping'] = ! empty( $input['enable_disable_shipping'] ) ? 1 : 0;
+        $sanitized['enable_image_resizer']    = ! empty( $input['enable_image_resizer'] ) ? 1 : 0;
 
         // CSS (mit wp_strip_all_tags für Sicherheit, aber CSS-Syntax erlauben)
         if ( isset( $input['price_on_request_css'] ) ) {
@@ -235,6 +249,9 @@ class WPE_Admin {
 
                 <h3><?php esc_html_e( 'Versandarten deaktivieren', 'woo-product-extras' ); ?></h3>
                 <p><?php esc_html_e( 'Nach Aktivierung erscheint bei jedem Produkt in der Seitenleiste eine Box mit allen verfügbaren Versandarten. Wählen Sie die Versandarten aus, die für dieses Produkt NICHT verfügbar sein sollen.', 'woo-product-extras' ); ?></p>
+
+                <h3><?php esc_html_e( 'Image Resizer 800px', 'woo-product-extras' ); ?></h3>
+                <p><?php esc_html_e( 'Nach Aktivierung erscheint in der Mediathek (Listenansicht und Einzelansicht) ein Button zum Skalieren von Bildern auf maximal 800px. Das Originalbild wird dabei überschrieben. Qualität: 92% (hohe Qualität).', 'woo-product-extras' ); ?></p>
 
                 <h3><?php esc_html_e( 'CSS Anpassung', 'woo-product-extras' ); ?></h3>
                 <p><?php esc_html_e( 'Nutzen Sie folgende CSS-Klasse für individuelle Styles:', 'woo-product-extras' ); ?></p>

@@ -96,6 +96,12 @@ class WooCommerce_Product_Extras {
             require_once WPE_PLUGIN_DIR . 'includes/class-wpe-disable-shipping.php';
             new WPE_Disable_Shipping();
         }
+
+        // Image Resizer Modul (kein WooCommerce benötigt)
+        if ( ! empty( $options['enable_image_resizer'] ) ) {
+            require_once WPE_PLUGIN_DIR . 'includes/class-wpe-image-resizer.php';
+            new WPE_Image_Resizer();
+        }
     }
 
     /**
@@ -117,6 +123,7 @@ class WooCommerce_Product_Extras {
         $default_options = array(
             'enable_price_on_request' => 0,
             'enable_disable_shipping' => 0,
+            'enable_image_resizer'    => 0,
             'price_on_request_css'    => "/* Preis auf Anfrage Styling */\n.price-on-request {\n    color: #e74c3c;\n    font-weight: bold;\n    font-size: 1.1em;\n}"
         );
 

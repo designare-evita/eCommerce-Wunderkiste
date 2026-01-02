@@ -16,6 +16,12 @@ Ein WordPress/WooCommerce Plugin mit erweiterten Produktoptionen.
 - Zeigt alle konfigurierten Versandzonen und -methoden an
 - Wenn ein Produkt im Warenkorb ist, werden die deaktivierten Versandarten nicht angezeigt
 
+### 3. Image Resizer 800px
+- Skaliert Bilder auf maximal 800px Breite/Höhe
+- Button in der Mediathek (Einzelansicht und Listenansicht)
+- Hohe Qualität (92%) für optimale Ergebnisse
+- Überschreibt das Originalbild und aktualisiert alle Metadaten
+
 ## Installation
 
 1. Plugin-Ordner `woo-product-extras` in `/wp-content/plugins/` hochladen
@@ -74,6 +80,7 @@ Die "Preis auf Anfrage" Anzeige nutzt die CSS-Klasse `.price-on-request`.
 - Initiale Version
 - Preis auf Anfrage Modul
 - Versandarten deaktivieren Modul
+- Image Resizer 800px Modul
 - Custom CSS Editor mit CodeMirror
 
 ## Lizenz
