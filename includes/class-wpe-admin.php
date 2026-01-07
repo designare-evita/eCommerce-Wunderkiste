@@ -79,16 +79,29 @@ class WPE_Admin {
             )
         );
 
+        // Zubehör/Accessories aktivieren
+        add_settings_field(
+            'enable_product_accessories',
+            __( 'Zubehör Tab', 'woo-product-extras' ),
+            array( $this, 'checkbox_field_callback' ),
+            'woo-product-extras',
+            'wpe_main_section',
+            array(
+                'id'          => 'enable_product_accessories',
+                'description' => __( 'Fügt einen "Zubehör" Tab bei Produkten hinzu, um passende Produkte zu verknüpfen.', 'woo-product-extras' )
+            )
+        );
+
         // Image Resizer aktivieren
         add_settings_field(
             'enable_image_resizer',
-            __( 'Image Resizer 800px', 'woo-product-extras' ),
+            __( 'Image Resizer 800px/1200px', 'woo-product-extras' ),
             array( $this, 'checkbox_field_callback' ),
             'woo-product-extras',
             'wpe_main_section',
             array(
                 'id'          => 'enable_image_resizer',
-                'description' => __( 'Fügt einen Button in der Mediathek hinzu, um Bilder auf max. 800px zu skalieren.', 'woo-product-extras' )
+                'description' => __( 'Fügt einen Button in der Mediathek hinzu, um Bilder auf max. 800px oder 1200px zu skalieren.', 'woo-product-extras' )
             )
         );
 
@@ -169,9 +182,10 @@ class WPE_Admin {
         $sanitized = array();
 
         // Checkboxen
-        $sanitized['enable_price_on_request'] = ! empty( $input['enable_price_on_request'] ) ? 1 : 0;
-        $sanitized['enable_disable_shipping'] = ! empty( $input['enable_disable_shipping'] ) ? 1 : 0;
-        $sanitized['enable_image_resizer']    = ! empty( $input['enable_image_resizer'] ) ? 1 : 0;
+        $sanitized['enable_price_on_request']    = ! empty( $input['enable_price_on_request'] ) ? 1 : 0;
+        $sanitized['enable_disable_shipping']    = ! empty( $input['enable_disable_shipping'] ) ? 1 : 0;
+        $sanitized['enable_product_accessories'] = ! empty( $input['enable_product_accessories'] ) ? 1 : 0;
+        $sanitized['enable_image_resizer']       = ! empty( $input['enable_image_resizer'] ) ? 1 : 0;
 
         // CSS (mit wp_strip_all_tags für Sicherheit, aber CSS-Syntax erlauben)
         if ( isset( $input['price_on_request_css'] ) ) {
@@ -250,8 +264,11 @@ class WPE_Admin {
                 <h3><?php esc_html_e( 'Versandarten deaktivieren', 'woo-product-extras' ); ?></h3>
                 <p><?php esc_html_e( 'Nach Aktivierung erscheint bei jedem Produkt in der Seitenleiste eine Box mit allen verfügbaren Versandarten. Wählen Sie die Versandarten aus, die für dieses Produkt NICHT verfügbar sein sollen.', 'woo-product-extras' ); ?></p>
 
-                <h3><?php esc_html_e( 'Image Resizer 800px', 'woo-product-extras' ); ?></h3>
-                <p><?php esc_html_e( 'Nach Aktivierung erscheint in der Mediathek (Listenansicht und Einzelansicht) ein Button zum Skalieren von Bildern auf maximal 800px. Das Originalbild wird dabei überschrieben. Qualität: 92% (hohe Qualität).', 'woo-product-extras' ); ?></p>
+                <h3><?php esc_html_e( 'Zubehör Tab', 'woo-product-extras' ); ?></h3>
+                <p><?php esc_html_e( 'Nach Aktivierung erscheint bei jedem Produkt in der Seitenleiste eine Box "Zubehör / Passende Produkte". Suchen Sie nach Produkten und wählen Sie die gewünschten aus. Im Frontend erscheint dann ein "Zubehör" Tab mit den verknüpften Produkten.', 'woo-product-extras' ); ?></p>
+
+                <h3><?php esc_html_e( 'Image Resizer 800px/1200px', 'woo-product-extras' ); ?></h3>
+                <p><?php esc_html_e( 'Nach Aktivierung erscheint in der Mediathek (Listenansicht und Einzelansicht) Buttons zum Skalieren von Bildern auf maximal 800px oder 1200px. Das Originalbild wird dabei überschrieben. Qualität: 92% (hohe Qualität).', 'woo-product-extras' ); ?></p>
 
                 <h3><?php esc_html_e( 'CSS Anpassung', 'woo-product-extras' ); ?></h3>
                 <p><?php esc_html_e( 'Nutzen Sie folgende CSS-Klasse für individuelle Styles:', 'woo-product-extras' ); ?></p>
