@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: WooCommerce Product Extras
- * Plugin URI: https://example.com/woo-product-extras
+ * Plugin Name: eCommerce Wunderkiste
+ * Plugin URI: https://designare.at
  * Description: Erweiterte Produktoptionen für WooCommerce - Preis auf Anfrage, Versandarten pro Produkt, Zubehör Tab & Image Resizer
  * Version: 1.1.0
- * Author: Ihr Name
- * Author URI: https://example.com
+ * Author: Michael Kanda
+ * Author URI: https://designare.at
  * Text Domain: woo-product-extras
  * Domain Path: /languages
  * Requires at least: 5.8
