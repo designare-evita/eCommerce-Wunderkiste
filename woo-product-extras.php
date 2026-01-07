@@ -2,8 +2,8 @@
 /**
  * Plugin Name: WooCommerce Product Extras
  * Plugin URI: https://example.com/woo-product-extras
- * Description: Erweiterte Produktoptionen für WooCommerce - Preis auf Anfrage & Versandarten pro Produkt deaktivieren
- * Version: 1.0.0
+ * Description: Erweiterte Produktoptionen für WooCommerce - Preis auf Anfrage, Versandarten pro Produkt, Zubehör Tab & Image Resizer
+ * Version: 1.1.0
  * Author: Ihr Name
  * Author URI: https://example.com
  * Text Domain: woo-product-extras
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin-Konstanten definieren
-define( 'WPE_VERSION', '1.0.0' );
+define( 'WPE_VERSION', '1.1.0' );
 define( 'WPE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'WPE_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -97,6 +97,12 @@ class WooCommerce_Product_Extras {
             new WPE_Disable_Shipping();
         }
 
+        // Zubehör/Accessories Modul
+        if ( ! empty( $options['enable_product_accessories'] ) ) {
+            require_once WPE_PLUGIN_DIR . 'includes/class-wpe-product-accessories.php';
+            new WPE_Product_Accessories();
+        }
+
         // Image Resizer Modul (kein WooCommerce benötigt)
         if ( ! empty( $options['enable_image_resizer'] ) ) {
             require_once WPE_PLUGIN_DIR . 'includes/class-wpe-image-resizer.php';
@@ -121,10 +127,11 @@ class WooCommerce_Product_Extras {
     public function activate() {
         // Standard-Optionen setzen
         $default_options = array(
-            'enable_price_on_request' => 0,
-            'enable_disable_shipping' => 0,
-            'enable_image_resizer'    => 0,
-            'price_on_request_css'    => "/* Preis auf Anfrage Styling */\n.price-on-request {\n    color: #e74c3c;\n    font-weight: bold;\n    font-size: 1.1em;\n}"
+            'enable_price_on_request'    => 0,
+            'enable_disable_shipping'    => 0,
+            'enable_product_accessories' => 0,
+            'enable_image_resizer'       => 0,
+            'price_on_request_css'       => "/* Preis auf Anfrage Styling */\n.price-on-request {\n    color: #e74c3c;\n    font-weight: bold;\n    font-size: 1.1em;\n}"
         );
 
         if ( ! get_option( 'wpe_options' ) ) {
