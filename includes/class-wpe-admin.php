@@ -105,6 +105,19 @@ class WPE_Admin {
             )
         );
 
+        // NEU: Order Recovery aktivieren
+        add_settings_field(
+            'enable_order_recovery',
+            __( 'Order Recovery (Zahlungsabbruch)', 'woo-product-extras' ),
+            array( $this, 'checkbox_field_callback' ),
+            'woo-product-extras',
+            'wpe_main_section',
+            array(
+                'id'          => 'enable_order_recovery',
+                'description' => __( 'Aktiviert Szenarien A, B und C: Mail nach 1h bei Abbruch, Sofort-Mail bei Fehler, Manueller Button.', 'woo-product-extras' )
+            )
+        );
+
         // CSS Bereich
         add_settings_section(
             'wpe_css_section',
@@ -186,6 +199,9 @@ class WPE_Admin {
         $sanitized['enable_disable_shipping']    = ! empty( $input['enable_disable_shipping'] ) ? 1 : 0;
         $sanitized['enable_product_accessories'] = ! empty( $input['enable_product_accessories'] ) ? 1 : 0;
         $sanitized['enable_image_resizer']       = ! empty( $input['enable_image_resizer'] ) ? 1 : 0;
+        
+        // NEU: Order Recovery
+        $sanitized['enable_order_recovery']      = ! empty( $input['enable_order_recovery'] ) ? 1 : 0;
 
         // CSS (mit wp_strip_all_tags für Sicherheit, aber CSS-Syntax erlauben)
         if ( isset( $input['price_on_request_css'] ) ) {
@@ -269,6 +285,9 @@ class WPE_Admin {
 
                 <h3><?php esc_html_e( 'Image Resizer 800px/1200px', 'woo-product-extras' ); ?></h3>
                 <p><?php esc_html_e( 'Nach Aktivierung erscheint in der Mediathek (Listenansicht und Einzelansicht) Buttons zum Skalieren von Bildern auf maximal 800px oder 1200px. Das Originalbild wird dabei überschrieben. Qualität: 92% (hohe Qualität).', 'woo-product-extras' ); ?></p>
+                
+                <h3><?php esc_html_e( 'Order Recovery', 'woo-product-extras' ); ?></h3>
+                <p><?php esc_html_e( 'Vollautomatisch: Sendet eine E-Mail, wenn eine Zahlung 1 Stunde lang auf "Zahlung ausstehend" steht, oder sofort bei "Fehlgeschlagen". Fügt außerdem einen manuellen "Zahlungslink senden" Button in der Bestellübersicht hinzu.', 'woo-product-extras' ); ?></p>
 
                 <h3><?php esc_html_e( 'CSS Anpassung', 'woo-product-extras' ); ?></h3>
                 <p><?php esc_html_e( 'Nutzen Sie folgende CSS-Klasse für individuelle Styles:', 'woo-product-extras' ); ?></p>
