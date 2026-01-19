@@ -33,6 +33,12 @@ Ein WordPress/WooCommerce Plugin mit erweiterten Produktoptionen.
 - **Szenario B:** Sendet sofort eine E-Mail, wenn eine Zahlung fehlschlägt ("Failed").
 - **Szenario C:** Fügt einen Button in der Bestellübersicht hinzu, um den Zahlungslink manuell erneut per E-Mail zu senden.
 
+### 6. Staffelpreise (Tiered Pricing)
+- Ermöglicht mengenbasierte Preise (Mengenrabatte)
+- Automatische Preisanpassung im Warenkorb, sobald die Menge erreicht ist
+- Zeigt automatisch eine Preistabelle auf der Produktseite an
+- Flexibel konfigurierbar (z.B. 1-5 Stück: 4€, ab 6 Stück: 3€)
+
 ## Installation
 
 1. Plugin-Ordner `woo-product-extras` in `/wp-content/plugins/` hochladen
@@ -47,11 +53,18 @@ Unter **WooCommerce → Product Extras** können Sie:
 - Custom CSS für "Preis auf Anfrage" definieren
 
 ### Pro Produkt Einstellungen
-Nach Aktivierung der Module erscheinen in der **Seitenleiste** des Produkt-Editors:
+Nach Aktivierung der Module erscheinen im Produkt-Editor folgende Bereiche:
+
+**In der Seitenleiste:**
 - **Preis auf Anfrage Box**: Checkbox zum Aktivieren + individueller Anzeigetext
 - **Versandarten Box**: Checkboxen für alle Versandarten die deaktiviert werden sollen
 - **Zubehör Box**: Suchfeld zum Hinzufügen von verknüpften Produkten
 
-## CSS Anpassung
-Die "Preis auf Anfrage" Anzeige nutzt die CSS-Klasse `.price-on-request`.
+**Unter dem Editor (Hauptbereich):**
+- **Staffelpreise Box**: Tabelle zum Hinzufügen von Preisstaffeln (Min/Max Stückzahl und Preis)
 
+## CSS Anpassung
+Für individuelle Styles können folgende Klassen genutzt werden:
+
+- `.price-on-request`: Der Text "Preis auf Anfrage"
+- `.wpe-tiered-pricing-table`: Die Tabelle der Staffelpreise im Frontend
