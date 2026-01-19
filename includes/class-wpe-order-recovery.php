@@ -39,32 +39,65 @@ class WPE_Order_Recovery {
 
     /**
      * SZENARIO A: Cronjob ausführen
+     * + NEU: Info-Mail an Admin
      */
     public function check_pending_order_status( $order_id ) {
-        $order = wc_get_product( $order_id ); // Fallback
-        if ( ! $order ) {
-            $order = wc_get_order( $order_id );
-        }
+        $order = wc_get_order( $order_id ); // Korrekte WC Funktion
 
         if ( ! $order ) return;
 
         // Wir prüfen, ob die Bestellung IMMER NOCH "pending" ist
         if ( $order->has_status( 'pending' ) ) {
-            // Sende die "Customer Invoice / Order Details" Mail (enthält Zahlungslink)
+            // 1. Sende die "Customer Invoice / Order Details" Mail (enthält Zahlungslink)
             WC()->mailer()->get_emails()['WC_Email_Customer_Invoice']->trigger( $order_id );
             
-            // Notiz an der Bestellung hinterlassen
+            // 2. Notiz an der Bestellung hinterlassen
             $order->add_order_note( '[Wunderkiste] Automatische Erinnerungs-Mail nach 1 Std. gesendet.' );
+
+            // 3. NEU: Info-Mail an Admin senden
+            $this->send_admin_info_mail( $order, 'pending_recovery' );
         }
     }
 
     /**
      * SZENARIO B: Sofort bei "Failed"
+     * + NEU: Info-Mail an Admin
      */
     public function send_recovery_email_immediately( $order_id, $order ) {
-        // Prüfen, ob wir das nicht gerade erst manuell gesendet haben, um Loop zu vermeiden
+        // 1. Mail an Kunden senden (Zahlungsaufforderung)
         WC()->mailer()->get_emails()['WC_Email_Customer_Invoice']->trigger( $order_id );
+        
+        // 2. Notiz im System hinterlegen
         $order->add_order_note( '[Wunderkiste] Sofortige Mail wegen fehlgeschlagener Zahlung gesendet.' );
+
+        // 3. NEU: Info-Mail an Admin senden
+        $this->send_admin_info_mail( $order, 'failed_recovery' );
+    }
+
+    /**
+     * HILFSFUNKTION: Admin Benachrichtigung senden
+     */
+    private function send_admin_info_mail( $order, $type ) {
+        $to = get_option( 'admin_email' ); // Admin-Email aus Einstellungen
+        $order_id = $order->get_id();
+        $edit_link = admin_url( 'post.php?post=' . $order_id . '&action=edit' );
+
+        if ( 'failed_recovery' === $type ) {
+            $subject = sprintf( __( '[Admin Info] Zahlung FEHLGESCHLAGEN: Bestellung #%s', 'woo-product-extras' ), $order_id );
+            $message_intro = __( "die Zahlung für Bestellung #%s ist offiziell fehlgeschlagen (Status: Failed).", 'woo-product-extras' );
+        } else {
+            // pending_recovery
+            $subject = sprintf( __( '[Admin Info] Zahlung NOCH AUSSTEHEND: Bestellung #%s', 'woo-product-extras' ), $order_id );
+            $message_intro = __( "die Bestellung #%s ist seit 1 Stunde unbezahlt (Status: Pending).", 'woo-product-extras' );
+        }
+
+        $message = sprintf( 
+            __( "Hallo Admin,\n\n%s\n\nDas System hat dem Kunden automatisch einen Link zur Zahlung gesendet.\n\nLink zur Bestellung: %s", 'woo-product-extras' ), 
+            sprintf( $message_intro, $order_id ),
+            $edit_link
+        );
+        
+        wp_mail( $to, $subject, $message );
     }
 
     /**
@@ -85,7 +118,6 @@ class WPE_Order_Recovery {
 
     /**
      * E-Mail Inhalt anpassen (optional)
-     * Fügt einen freundlichen Text hinzu, wenn es sich um die Zahlungsaufforderung handelt
      */
     public function add_custom_email_message( $order, $sent_to_admin, $plain_text, $email ) {
         if ( 'customer_invoice' === $email->id && ! $sent_to_admin ) {
