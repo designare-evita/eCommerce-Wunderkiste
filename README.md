@@ -16,11 +16,22 @@ Ein WordPress/WooCommerce Plugin mit erweiterten Produktoptionen.
 - Zeigt alle konfigurierten Versandzonen und -methoden an
 - Wenn ein Produkt im Warenkorb ist, werden die deaktivierten Versandarten nicht angezeigt
 
-### 3. Image Resizer 800px
-- Skaliert Bilder auf maximal 800px Breite/Höhe
+### 3. Zubehör Tab (Cross-Selling)
+- Fügt einen neuen Tab "Zubehör" auf der Produktseite hinzu
+- Einfache Zuweisung von passenden Produkten über eine Suchmaske in der Produkt-Seitenleiste
+- Ideal für Ersatzteile oder ergänzende Artikel
+
+### 4. Image Resizer 800px / 1200px
+- Skaliert Bilder auf maximal 800px oder 1200px Breite/Höhe
 - Button in der Mediathek (Einzelansicht und Listenansicht)
 - Hohe Qualität (92%) für optimale Ergebnisse
 - Überschreibt das Originalbild und aktualisiert alle Metadaten
+
+### 5. Order Recovery (Zahlungsabbruch)
+- Hilft verlorene Umsätze bei abgebrochenen Zahlungen zu retten
+- **Szenario A:** Sendet automatisch eine E-Mail (inkl. Zahlungslink), wenn eine Bestellung 1 Stunde lang den Status "Zahlung ausstehend" hat.
+- **Szenario B:** Sendet sofort eine E-Mail, wenn eine Zahlung fehlschlägt ("Failed").
+- **Szenario C:** Fügt einen Button in der Bestellübersicht hinzu, um den Zahlungslink manuell erneut per E-Mail zu senden.
 
 ## Installation
 
@@ -39,50 +50,8 @@ Unter **WooCommerce → Product Extras** können Sie:
 Nach Aktivierung der Module erscheinen in der **Seitenleiste** des Produkt-Editors:
 - **Preis auf Anfrage Box**: Checkbox zum Aktivieren + individueller Anzeigetext
 - **Versandarten Box**: Checkboxen für alle Versandarten die deaktiviert werden sollen
+- **Zubehör Box**: Suchfeld zum Hinzufügen von verknüpften Produkten
 
 ## CSS Anpassung
-
 Die "Preis auf Anfrage" Anzeige nutzt die CSS-Klasse `.price-on-request`.
 
-### Beispiel CSS:
-```css
-.price-on-request {
-    color: #e74c3c;
-    font-weight: bold;
-    font-size: 1.2em;
-    text-transform: uppercase;
-    background: #fff3cd;
-    padding: 5px 10px;
-    border-radius: 3px;
-}
-```
-
-### Verfügbare CSS-Eigenschaften:
-- `color` - Textfarbe
-- `font-weight` - Schriftstärke (normal, bold, 100-900)
-- `font-size` - Schriftgröße
-- `font-style` - Schriftstil (normal, italic)
-- `text-transform` - Textumwandlung (uppercase, lowercase, capitalize)
-- `background` - Hintergrundfarbe
-- `padding` - Innenabstand
-- `border` - Rahmen
-- `border-radius` - Abgerundete Ecken
-
-## Anforderungen
-
-- WordPress 5.8+
-- WooCommerce 5.0+
-- PHP 7.4+
-
-## Changelog
-
-### 1.0.0
-- Initiale Version
-- Preis auf Anfrage Modul
-- Versandarten deaktivieren Modul
-- Image Resizer 800px Modul
-- Custom CSS Editor mit CodeMirror
-
-## Lizenz
-
-GPL v2 oder höher
