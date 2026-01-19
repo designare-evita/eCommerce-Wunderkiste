@@ -108,6 +108,12 @@ class WooCommerce_Product_Extras {
             require_once WPE_PLUGIN_DIR . 'includes/class-wpe-image-resizer.php';
             new WPE_Image_Resizer();
         }
+
+        // NEU: Order Recovery Modul
+        if ( ! empty( $options['enable_order_recovery'] ) ) {
+            require_once WPE_PLUGIN_DIR . 'includes/class-wpe-order-recovery.php';
+            new WPE_Order_Recovery();
+        }
     }
 
     /**
@@ -131,6 +137,7 @@ class WooCommerce_Product_Extras {
             'enable_disable_shipping'    => 0,
             'enable_product_accessories' => 0,
             'enable_image_resizer'       => 0,
+            'enable_order_recovery'      => 0, // Standardmäßig aus
             'price_on_request_css'       => "/* Preis auf Anfrage Styling */\n.price-on-request {\n    color: #e74c3c;\n    font-weight: bold;\n    font-size: 1.1em;\n}"
         );
 
