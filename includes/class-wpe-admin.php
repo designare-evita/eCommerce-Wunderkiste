@@ -105,7 +105,7 @@ class WPE_Admin {
             )
         );
 
-        // NEU: Order Recovery aktivieren
+        // Order Recovery aktivieren
         add_settings_field(
             'enable_order_recovery',
             __( 'Order Recovery (Zahlungsabbruch)', 'woo-product-extras' ),
@@ -115,6 +115,19 @@ class WPE_Admin {
             array(
                 'id'          => 'enable_order_recovery',
                 'description' => __( 'Aktiviert Szenarien A, B und C: Mail nach 1h bei Abbruch, Sofort-Mail bei Fehler, Manueller Button.', 'woo-product-extras' )
+            )
+        );
+
+        // NEU: Staffelpreise aktivieren
+        add_settings_field(
+            'enable_tiered_pricing',
+            __( 'Staffelpreise', 'woo-product-extras' ),
+            array( $this, 'checkbox_field_callback' ),
+            'woo-product-extras',
+            'wpe_main_section',
+            array(
+                'id'          => 'enable_tiered_pricing',
+                'description' => __( 'Aktiviert Preisstaffelungen pro Produkt (Mengenrabatte).', 'woo-product-extras' )
             )
         );
 
@@ -200,8 +213,11 @@ class WPE_Admin {
         $sanitized['enable_product_accessories'] = ! empty( $input['enable_product_accessories'] ) ? 1 : 0;
         $sanitized['enable_image_resizer']       = ! empty( $input['enable_image_resizer'] ) ? 1 : 0;
         
-        // NEU: Order Recovery
+        // Order Recovery
         $sanitized['enable_order_recovery']      = ! empty( $input['enable_order_recovery'] ) ? 1 : 0;
+
+        // NEU: Staffelpreise
+        $sanitized['enable_tiered_pricing']      = ! empty( $input['enable_tiered_pricing'] ) ? 1 : 0;
 
         // CSS (mit wp_strip_all_tags für Sicherheit, aber CSS-Syntax erlauben)
         if ( isset( $input['price_on_request_css'] ) ) {
@@ -288,6 +304,9 @@ class WPE_Admin {
                 
                 <h3><?php esc_html_e( 'Order Recovery', 'woo-product-extras' ); ?></h3>
                 <p><?php esc_html_e( 'Vollautomatisch: Sendet eine E-Mail, wenn eine Zahlung 1 Stunde lang auf "Zahlung ausstehend" steht, oder sofort bei "Fehlgeschlagen". Fügt außerdem einen manuellen "Zahlungslink senden" Button in der Bestellübersicht hinzu.', 'woo-product-extras' ); ?></p>
+
+                <h3><?php esc_html_e( 'Staffelpreise', 'woo-product-extras' ); ?></h3>
+                <p><?php esc_html_e( 'Definieren Sie individuelle Preise basierend auf der Bestellmenge. Die Preistabelle wird automatisch auf der Produktseite angezeigt.', 'woo-product-extras' ); ?></p>
 
                 <h3><?php esc_html_e( 'CSS Anpassung', 'woo-product-extras' ); ?></h3>
                 <p><?php esc_html_e( 'Nutzen Sie folgende CSS-Klasse für individuelle Styles:', 'woo-product-extras' ); ?></p>
