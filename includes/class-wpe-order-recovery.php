@@ -116,7 +116,7 @@ class WPE_Order_Recovery {
         $order->add_order_note( '[Wunderkiste] Zahlungslink manuell versendet.', false, true );
     }
 
- /**
+    /**
      * E-Mail Inhalt anpassen: Gelbe Box mit Button und "Du"-Ansprache
      */
     public function add_custom_email_message( $order, $sent_to_admin, $plain_text, $email ) {
@@ -142,3 +142,4 @@ class WPE_Order_Recovery {
             echo '</div>';
         }
     }
+}
