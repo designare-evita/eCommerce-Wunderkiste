@@ -1,8 +1,8 @@
 <?php
 /**
- * Zubehör/Accessories Modul für WooCommerce
+ * Product Accessories Module
  *
- * Fügt einen "Zubehör" Tab bei Produkten hinzu mit Produkt-Verknüpfung
+ * Adds an "Accessories" tab to products with product linking
  * Version: 1.0
  */
 
@@ -13,38 +13,38 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPE_Product_Accessories {
 
     /**
-     * Meta Key für Zubehör-Produkte
+     * Meta key for accessory products
      */
     const META_KEY = '_wpe_accessory_products';
 
     /**
-     * Konstruktor
+     * Constructor
      */
     public function __construct() {
-        // Backend: Meta Box hinzufügen
+        // Backend: Add meta box
         add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
         add_action( 'save_post_product', array( $this, 'save_meta_box' ) );
-        
-        // Backend: Admin Scripts
+
+        // Backend: Admin scripts
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
-        
-        // Backend: AJAX Produktsuche
+
+        // Backend: AJAX product search
         add_action( 'wp_ajax_wpe_search_products', array( $this, 'ajax_search_products' ) );
-        
-        // Frontend: Tab hinzufügen
+
+        // Frontend: Add tab
         add_filter( 'woocommerce_product_tabs', array( $this, 'add_accessories_tab' ) );
-        
+
         // Frontend: Styles
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_styles' ) );
     }
 
     /**
-     * Meta Box im Produkt-Editor hinzufügen
+     * Add meta box to product editor
      */
     public function add_meta_box() {
         add_meta_box(
             'wpe_accessories_box',
-            __( '🔗 Zubehör / Passende Produkte', 'woo-product-extras' ),
+            __( '🔗 Accessories / Related Products', 'ecommerce-wunderkiste' ),
             array( $this, 'render_meta_box' ),
             'product',
             'side',
@@ -53,25 +53,25 @@ class WPE_Product_Accessories {
     }
 
     /**
-     * Meta Box rendern
+     * Render meta box
      */
     public function render_meta_box( $post ) {
         wp_nonce_field( 'wpe_accessories_nonce', 'wpe_accessories_nonce_field' );
-        
+
         $accessory_ids = get_post_meta( $post->ID, self::META_KEY, true );
         $accessory_ids = is_array( $accessory_ids ) ? $accessory_ids : array();
-        
+
         ?>
         <div class="wpe-accessories-wrapper">
             <div class="wpe-accessories-search">
-                <input type="text" 
-                       id="wpe-accessory-search" 
-                       class="widefat" 
-                       placeholder="<?php esc_attr_e( 'Produkt suchen...', 'woo-product-extras' ); ?>"
+                <input type="text"
+                       id="wpe-accessory-search"
+                       class="widefat"
+                       placeholder="<?php esc_attr_e( 'Search product...', 'ecommerce-wunderkiste' ); ?>"
                        autocomplete="off">
                 <div id="wpe-search-results" class="wpe-search-results"></div>
             </div>
-            
+
             <div id="wpe-selected-accessories" class="wpe-selected-accessories">
                 <?php
                 if ( ! empty( $accessory_ids ) ) {
@@ -84,32 +84,32 @@ class WPE_Product_Accessories {
                 }
                 ?>
             </div>
-            
-            <input type="hidden" 
-                   name="wpe_accessory_ids" 
-                   id="wpe-accessory-ids" 
+
+            <input type="hidden"
+                   name="wpe_accessory_ids"
+                   id="wpe-accessory-ids"
                    value="<?php echo esc_attr( implode( ',', $accessory_ids ) ); ?>">
-            
+
             <p class="description" style="margin-top: 10px;">
-                <?php esc_html_e( 'Wähle Produkte aus, die als Zubehör angezeigt werden sollen.', 'woo-product-extras' ); ?>
+                <?php esc_html_e( 'Select products to display as accessories.', 'ecommerce-wunderkiste' ); ?>
             </p>
         </div>
         <?php
     }
 
     /**
-     * Einzelnes ausgewähltes Produkt rendern
+     * Render single selected product
      */
     private function render_selected_product( $product ) {
         $thumb = $product->get_image( array( 30, 30 ) );
         $title = $product->get_name();
         $sku   = $product->get_sku();
         $id    = $product->get_id();
-        
+
         ?>
         <div class="wpe-selected-item" data-id="<?php echo esc_attr( $id ); ?>">
-            <span class="wpe-remove-item" title="<?php esc_attr_e( 'Entfernen', 'woo-product-extras' ); ?>">×</span>
-            <?php echo $thumb; ?>
+            <span class="wpe-remove-item" title="<?php esc_attr_e( 'Remove', 'ecommerce-wunderkiste' ); ?>">×</span>
+            <?php echo wp_kses_post( $thumb ); ?>
             <span class="wpe-item-title">
                 <?php echo esc_html( $title ); ?>
                 <?php if ( $sku ) : ?>
@@ -121,49 +121,54 @@ class WPE_Product_Accessories {
     }
 
     /**
-     * Meta Box speichern
+     * Save meta box
      */
     public function save_meta_box( $post_id ) {
-        // Nonce prüfen
-        if ( ! isset( $_POST['wpe_accessories_nonce_field'] ) || 
-             ! wp_verify_nonce( $_POST['wpe_accessories_nonce_field'], 'wpe_accessories_nonce' ) ) {
+        // Check nonce
+        if ( ! isset( $_POST['wpe_accessories_nonce_field'] ) ) {
             return;
         }
-        
-        // Auto-Save überspringen
+
+        // Sanitize and verify nonce
+        $nonce = sanitize_text_field( wp_unslash( $_POST['wpe_accessories_nonce_field'] ) );
+        if ( ! wp_verify_nonce( $nonce, 'wpe_accessories_nonce' ) ) {
+            return;
+        }
+
+        // Skip auto-save
         if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
             return;
         }
-        
-        // Berechtigung prüfen
+
+        // Check permissions
         if ( ! current_user_can( 'edit_post', $post_id ) ) {
             return;
         }
-        
-        // Accessory IDs speichern
+
+        // Save accessory IDs
         $accessory_ids = array();
         if ( ! empty( $_POST['wpe_accessory_ids'] ) ) {
-            $ids = explode( ',', sanitize_text_field( $_POST['wpe_accessory_ids'] ) );
+            $ids = explode( ',', sanitize_text_field( wp_unslash( $_POST['wpe_accessory_ids'] ) ) );
             $accessory_ids = array_filter( array_map( 'intval', $ids ) );
         }
-        
+
         update_post_meta( $post_id, self::META_KEY, $accessory_ids );
     }
 
     /**
-     * Admin Scripts und Styles laden
+     * Enqueue admin scripts and styles
      */
     public function enqueue_admin_scripts( $hook ) {
         global $post_type;
-        
-        if ( 'product' !== $post_type || ! in_array( $hook, array( 'post.php', 'post-new.php' ) ) ) {
+
+        if ( 'product' !== $post_type || ! in_array( $hook, array( 'post.php', 'post-new.php' ), true ) ) {
             return;
         }
-        
-        // Inline Styles
+
+        // Inline styles
         wp_add_inline_style( 'woocommerce_admin_styles', $this->get_admin_styles() );
-        
-        // Inline Script
+
+        // Inline script
         wp_add_inline_script( 'jquery', $this->get_admin_script() );
     }
 
@@ -290,6 +295,11 @@ class WPE_Product_Accessories {
      * Admin JavaScript
      */
     private function get_admin_script() {
+        $nonce = wp_create_nonce( 'wpe_search_products' );
+        $search_text = esc_js( __( 'Searching...', 'ecommerce-wunderkiste' ) );
+        $no_results_text = esc_js( __( 'No products found', 'ecommerce-wunderkiste' ) );
+        $remove_text = esc_js( __( 'Remove', 'ecommerce-wunderkiste' ) );
+
         return "
         jQuery(document).ready(function($) {
             var searchTimeout;
@@ -298,20 +308,20 @@ class WPE_Product_Accessories {
             var selectedContainer = $('#wpe-selected-accessories');
             var hiddenInput = $('#wpe-accessory-ids');
             var currentPostId = $('#post_ID').val();
-            
-            // Produktsuche
+
+            // Product search
             searchInput.on('input', function() {
                 var query = $(this).val();
-                
+
                 clearTimeout(searchTimeout);
-                
+
                 if (query.length < 2) {
                     searchResults.removeClass('active').empty();
                     return;
                 }
-                
-                searchResults.addClass('active').html('<div class=\"wpe-loading\">Suche...</div>');
-                
+
+                searchResults.addClass('active').html('<div class=\"wpe-loading\">{$search_text}</div>');
+
                 searchTimeout = setTimeout(function() {
                     $.ajax({
                         url: ajaxurl,
@@ -321,7 +331,7 @@ class WPE_Product_Accessories {
                             query: query,
                             exclude: currentPostId,
                             selected: hiddenInput.val(),
-                            nonce: '" . wp_create_nonce( 'wpe_search_products' ) . "'
+                            nonce: '{$nonce}'
                         },
                         success: function(response) {
                             if (response.success && response.data.length > 0) {
@@ -338,47 +348,47 @@ class WPE_Product_Accessories {
                                 });
                                 searchResults.html(html);
                             } else {
-                                searchResults.html('<div class=\"wpe-no-results\">Keine Produkte gefunden</div>');
+                                searchResults.html('<div class=\"wpe-no-results\">{$no_results_text}</div>');
                             }
                         }
                     });
                 }, 300);
             });
-            
-            // Produkt auswählen
+
+            // Select product
             searchResults.on('click', '.wpe-search-item', function() {
                 var item = $(this);
                 var id = item.data('id');
                 var title = item.find('.wpe-search-item-title').html();
                 var thumb = item.find('img').attr('src');
-                
-                // Bereits ausgewählt?
+
+                // Already selected?
                 if (selectedContainer.find('[data-id=\"' + id + '\"]').length > 0) {
                     return;
                 }
-                
-                // Zur Liste hinzufügen
+
+                // Add to list
                 var html = '<div class=\"wpe-selected-item\" data-id=\"' + id + '\">';
-                html += '<span class=\"wpe-remove-item\" title=\"Entfernen\">×</span>';
+                html += '<span class=\"wpe-remove-item\" title=\"{$remove_text}\">×</span>';
                 html += '<img src=\"' + thumb + '\" alt=\"\">';
                 html += '<span class=\"wpe-item-title\">' + title + '</span>';
                 html += '</div>';
-                
+
                 selectedContainer.append(html);
                 updateHiddenInput();
-                
-                // Suche zurücksetzen
+
+                // Reset search
                 searchInput.val('');
                 searchResults.removeClass('active').empty();
             });
-            
-            // Produkt entfernen
+
+            // Remove product
             selectedContainer.on('click', '.wpe-remove-item', function() {
                 $(this).closest('.wpe-selected-item').remove();
                 updateHiddenInput();
             });
-            
-            // Hidden Input aktualisieren
+
+            // Update hidden input
             function updateHiddenInput() {
                 var ids = [];
                 selectedContainer.find('.wpe-selected-item').each(function() {
@@ -386,8 +396,8 @@ class WPE_Product_Accessories {
                 });
                 hiddenInput.val(ids.join(','));
             }
-            
-            // Klick außerhalb schließt Dropdown
+
+            // Click outside closes dropdown
             $(document).on('click', function(e) {
                 if (!$(e.target).closest('.wpe-accessories-search').length) {
                     searchResults.removeClass('active');
@@ -398,20 +408,20 @@ class WPE_Product_Accessories {
     }
 
     /**
-     * AJAX: Produktsuche
+     * AJAX: Product search
      */
     public function ajax_search_products() {
         check_ajax_referer( 'wpe_search_products', 'nonce' );
-        
-        $query    = isset( $_POST['query'] ) ? sanitize_text_field( $_POST['query'] ) : '';
+
+        $query    = isset( $_POST['query'] ) ? sanitize_text_field( wp_unslash( $_POST['query'] ) ) : '';
         $exclude  = isset( $_POST['exclude'] ) ? intval( $_POST['exclude'] ) : 0;
-        $selected = isset( $_POST['selected'] ) ? sanitize_text_field( $_POST['selected'] ) : '';
-        
-        // Bereits ausgewählte IDs
+        $selected = isset( $_POST['selected'] ) ? sanitize_text_field( wp_unslash( $_POST['selected'] ) ) : '';
+
+        // Already selected IDs
         $selected_ids = array_filter( array_map( 'intval', explode( ',', $selected ) ) );
         $exclude_ids  = array_merge( array( $exclude ), $selected_ids );
-        
-        // Produkte suchen
+
+        // Search products
         $args = array(
             'post_type'      => 'product',
             'post_status'    => 'publish',
@@ -421,31 +431,21 @@ class WPE_Product_Accessories {
             'orderby'        => 'title',
             'order'          => 'ASC',
         );
-        
-        // Auch nach SKU suchen
-        $meta_query = array(
-            'relation' => 'OR',
-            array(
-                'key'     => '_sku',
-                'value'   => $query,
-                'compare' => 'LIKE',
-            ),
-        );
-        
-        // Erst normale Suche, dann SKU-Suche falls nichts gefunden
+
+        // First normal search
         $products_query = new WP_Query( $args );
-        
+
         $results = array();
-        
+
         if ( $products_query->have_posts() ) {
             while ( $products_query->have_posts() ) {
                 $products_query->the_post();
                 $product = wc_get_product( get_the_ID() );
-                
+
                 if ( $product ) {
                     $thumb_id  = $product->get_image_id();
                     $thumb_url = $thumb_id ? wp_get_attachment_image_url( $thumb_id, 'thumbnail' ) : wc_placeholder_img_src( 'thumbnail' );
-                    
+
                     $results[] = array(
                         'id'    => $product->get_id(),
                         'title' => $product->get_name(),
@@ -456,8 +456,8 @@ class WPE_Product_Accessories {
             }
             wp_reset_postdata();
         }
-        
-        // SKU-Suche als Fallback
+
+        // SKU search as fallback
         if ( empty( $results ) ) {
             $sku_args = array(
                 'post_type'      => 'product',
@@ -472,18 +472,18 @@ class WPE_Product_Accessories {
                     ),
                 ),
             );
-            
+
             $sku_query = new WP_Query( $sku_args );
-            
+
             if ( $sku_query->have_posts() ) {
                 while ( $sku_query->have_posts() ) {
                     $sku_query->the_post();
                     $product = wc_get_product( get_the_ID() );
-                    
+
                     if ( $product ) {
                         $thumb_id  = $product->get_image_id();
                         $thumb_url = $thumb_id ? wp_get_attachment_image_url( $thumb_id, 'thumbnail' ) : wc_placeholder_img_src( 'thumbnail' );
-                        
+
                         $results[] = array(
                             'id'    => $product->get_id(),
                             'title' => $product->get_name(),
@@ -495,27 +495,27 @@ class WPE_Product_Accessories {
                 wp_reset_postdata();
             }
         }
-        
+
         wp_send_json_success( $results );
     }
 
     /**
-     * Frontend: Zubehör Tab hinzufügen
+     * Frontend: Add accessories tab
      */
     public function add_accessories_tab( $tabs ) {
         global $product;
-        
+
         if ( ! $product ) {
             return $tabs;
         }
-        
+
         $accessory_ids = get_post_meta( $product->get_id(), self::META_KEY, true );
-        
+
         if ( empty( $accessory_ids ) || ! is_array( $accessory_ids ) ) {
             return $tabs;
         }
-        
-        // Prüfen ob mindestens ein Produkt existiert
+
+        // Check if at least one product exists
         $has_valid_products = false;
         foreach ( $accessory_ids as $id ) {
             $acc_product = wc_get_product( $id );
@@ -524,65 +524,65 @@ class WPE_Product_Accessories {
                 break;
             }
         }
-        
+
         if ( ! $has_valid_products ) {
             return $tabs;
         }
-        
+
         $tabs['accessories'] = array(
-            'title'    => __( 'Zubehör', 'woo-product-extras' ),
+            'title'    => __( 'Accessories', 'ecommerce-wunderkiste' ),
             'priority' => 25,
             'callback' => array( $this, 'render_accessories_tab' ),
         );
-        
+
         return $tabs;
     }
 
     /**
-     * Frontend: Tab-Inhalt rendern
+     * Frontend: Render tab content
      */
     public function render_accessories_tab() {
         global $product;
-        
+
         $accessory_ids = get_post_meta( $product->get_id(), self::META_KEY, true );
-        
+
         if ( empty( $accessory_ids ) || ! is_array( $accessory_ids ) ) {
             return;
         }
-        
+
         echo '<div class="wpe-accessories-list">';
-        echo '<h3>' . esc_html__( 'Passendes Zubehör', 'woo-product-extras' ) . '</h3>';
-        
+        echo '<h3>' . esc_html__( 'Matching Accessories', 'ecommerce-wunderkiste' ) . '</h3>';
+
         echo '<ul class="products columns-4">';
-        
+
         foreach ( $accessory_ids as $accessory_id ) {
             $accessory = wc_get_product( $accessory_id );
-            
+
             if ( ! $accessory || ! $accessory->is_visible() ) {
                 continue;
             }
-            
-            // WooCommerce Produkt-Template nutzen
+
+            // Use WooCommerce product template
             $post_object = get_post( $accessory_id );
-            setup_postdata( $GLOBALS['post'] =& $post_object );
-            
+            setup_postdata( $GLOBALS['post'] =& $post_object ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
             wc_get_template_part( 'content', 'product' );
         }
-        
+
         wp_reset_postdata();
-        
+
         echo '</ul>';
         echo '</div>';
     }
 
     /**
-     * Frontend Styles
+     * Frontend styles
      */
     public function enqueue_frontend_styles() {
         if ( ! is_product() ) {
             return;
         }
-        
+
         $css = '
             .wpe-accessories-list {
                 margin-top: 20px;
@@ -595,7 +595,7 @@ class WPE_Product_Accessories {
                 padding: 0;
             }
         ';
-        
+
         wp_add_inline_style( 'woocommerce-general', $css );
     }
 }

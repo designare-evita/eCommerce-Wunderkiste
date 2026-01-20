@@ -1,8 +1,8 @@
 <?php
 /**
- * Admin-Klasse für WooCommerce Product Extras
+ * Admin class for eCommerce Wunderkiste
  *
- * Verwaltet die Einstellungsseite und Plugin-Optionen
+ * Manages settings page and plugin options
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPE_Admin {
 
     /**
-     * Konstruktor
+     * Constructor
      */
     public function __construct() {
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
@@ -22,13 +22,13 @@ class WPE_Admin {
     }
 
     /**
-     * Admin-Menü hinzufügen
+     * Add admin menu
      */
     public function add_admin_menu() {
         add_submenu_page(
             'woocommerce',
-            __( 'Product Extras', 'woo-product-extras' ),
-            __( 'Product Extras', 'woo-product-extras' ),
+            __( 'Product Extras', 'ecommerce-wunderkiste' ),
+            __( 'Product Extras', 'ecommerce-wunderkiste' ),
             'manage_woocommerce',
             'woo-product-extras',
             array( $this, 'render_settings_page' )
@@ -36,7 +36,7 @@ class WPE_Admin {
     }
 
     /**
-     * Einstellungen registrieren
+     * Register settings
      */
     public function register_settings() {
         register_setting(
@@ -45,140 +45,140 @@ class WPE_Admin {
             array( $this, 'sanitize_options' )
         );
 
-        // Hauptbereich
+        // Main section
         add_settings_section(
             'wpe_main_section',
-            __( 'Module aktivieren', 'woo-product-extras' ),
+            __( 'Enable Modules', 'ecommerce-wunderkiste' ),
             array( $this, 'main_section_callback' ),
             'woo-product-extras'
         );
 
-        // Preis auf Anfrage aktivieren
+        // Price on Request
         add_settings_field(
             'enable_price_on_request',
-            __( 'Preis auf Anfrage', 'woo-product-extras' ),
+            __( 'Price on Request', 'ecommerce-wunderkiste' ),
             array( $this, 'checkbox_field_callback' ),
             'woo-product-extras',
             'wpe_main_section',
             array(
                 'id'          => 'enable_price_on_request',
-                'description' => __( 'Ermöglicht es, bei einzelnen Produkten "Preis auf Anfrage" anzuzeigen statt des Preises.', 'woo-product-extras' )
+                'description' => __( 'Allows displaying "Price on Request" instead of the price for individual products.', 'ecommerce-wunderkiste' )
             )
         );
 
-        // Versandarten deaktivieren aktivieren
+        // Disable Shipping
         add_settings_field(
             'enable_disable_shipping',
-            __( 'Versandarten deaktivieren', 'woo-product-extras' ),
+            __( 'Disable Shipping Methods', 'ecommerce-wunderkiste' ),
             array( $this, 'checkbox_field_callback' ),
             'woo-product-extras',
             'wpe_main_section',
             array(
                 'id'          => 'enable_disable_shipping',
-                'description' => __( 'Ermöglicht es, bestimmte Versandarten pro Produkt zu deaktivieren.', 'woo-product-extras' )
+                'description' => __( 'Allows disabling specific shipping methods per product.', 'ecommerce-wunderkiste' )
             )
         );
 
-        // Zubehör/Accessories aktivieren
+        // Accessories
         add_settings_field(
             'enable_product_accessories',
-            __( 'Zubehör Tab', 'woo-product-extras' ),
+            __( 'Accessories Tab', 'ecommerce-wunderkiste' ),
             array( $this, 'checkbox_field_callback' ),
             'woo-product-extras',
             'wpe_main_section',
             array(
                 'id'          => 'enable_product_accessories',
-                'description' => __( 'Fügt einen "Zubehör" Tab bei Produkten hinzu, um passende Produkte zu verknüpfen.', 'woo-product-extras' )
+                'description' => __( 'Adds an "Accessories" tab to products to link related products.', 'ecommerce-wunderkiste' )
             )
         );
 
-        // Image Resizer aktivieren
+        // Image Resizer
         add_settings_field(
             'enable_image_resizer',
-            __( 'Image Resizer 800px/1200px', 'woo-product-extras' ),
+            __( 'Image Resizer 800px/1200px', 'ecommerce-wunderkiste' ),
             array( $this, 'checkbox_field_callback' ),
             'woo-product-extras',
             'wpe_main_section',
             array(
                 'id'          => 'enable_image_resizer',
-                'description' => __( 'Fügt einen Button in der Mediathek hinzu, um Bilder auf max. 800px oder 1200px zu skalieren.', 'woo-product-extras' )
+                'description' => __( 'Adds a button in the media library to resize images to max. 800px or 1200px.', 'ecommerce-wunderkiste' )
             )
         );
 
-        // Order Recovery aktivieren
+        // Order Recovery
         add_settings_field(
             'enable_order_recovery',
-            __( 'Order Recovery (Zahlungsabbruch)', 'woo-product-extras' ),
+            __( 'Order Recovery (Payment Failure)', 'ecommerce-wunderkiste' ),
             array( $this, 'checkbox_field_callback' ),
             'woo-product-extras',
             'wpe_main_section',
             array(
                 'id'          => 'enable_order_recovery',
-                'description' => __( 'Aktiviert Szenarien A, B und C: Mail nach 1h bei Abbruch, Sofort-Mail bei Fehler, Manueller Button.', 'woo-product-extras' )
+                'description' => __( 'Enables scenarios A, B and C: Email after 1h on pending, instant email on failure, manual button.', 'ecommerce-wunderkiste' )
             )
         );
 
-        // NEU: Staffelpreise aktivieren
+        // Tiered Pricing
         add_settings_field(
             'enable_tiered_pricing',
-            __( 'Staffelpreise', 'woo-product-extras' ),
+            __( 'Tiered Pricing', 'ecommerce-wunderkiste' ),
             array( $this, 'checkbox_field_callback' ),
             'woo-product-extras',
             'wpe_main_section',
             array(
                 'id'          => 'enable_tiered_pricing',
-                'description' => __( 'Aktiviert Preisstaffelungen pro Produkt (Mengenrabatte).', 'woo-product-extras' )
+                'description' => __( 'Enables tiered pricing per product (quantity discounts).', 'ecommerce-wunderkiste' )
             )
         );
 
-        // CSS Bereich
+        // CSS Section
         add_settings_section(
             'wpe_css_section',
-            __( 'Custom CSS', 'woo-product-extras' ),
+            __( 'Custom CSS', 'ecommerce-wunderkiste' ),
             array( $this, 'css_section_callback' ),
             'woo-product-extras'
         );
 
-        // Custom CSS für Preis auf Anfrage
+        // Custom CSS for Price on Request
         add_settings_field(
             'price_on_request_css',
-            __( 'Preis auf Anfrage CSS', 'woo-product-extras' ),
+            __( 'Price on Request CSS', 'ecommerce-wunderkiste' ),
             array( $this, 'textarea_field_callback' ),
             'woo-product-extras',
             'wpe_css_section',
             array(
                 'id'          => 'price_on_request_css',
-                'description' => __( 'CSS für die "Preis auf Anfrage" Anzeige. Nutzen Sie die Klasse .price-on-request', 'woo-product-extras' ),
+                'description' => __( 'CSS for the "Price on Request" display. Use the class .price-on-request', 'ecommerce-wunderkiste' ),
                 'rows'        => 10
             )
         );
     }
 
     /**
-     * Hauptbereich Beschreibung
+     * Main section description
      */
     public function main_section_callback() {
-        echo '<p>' . esc_html__( 'Aktivieren Sie die gewünschten Module. Die Einstellungen werden pro Produkt in der Seitenleiste angezeigt.', 'woo-product-extras' ) . '</p>';
+        echo '<p>' . esc_html__( 'Enable the desired modules. Settings will be displayed per product in the sidebar.', 'ecommerce-wunderkiste' ) . '</p>';
     }
 
     /**
-     * CSS Bereich Beschreibung
+     * CSS section description
      */
     public function css_section_callback() {
-        echo '<p>' . esc_html__( 'Passen Sie das Aussehen der Funktionen mit eigenem CSS an.', 'woo-product-extras' ) . '</p>';
+        echo '<p>' . esc_html__( 'Customize the appearance of features with your own CSS.', 'ecommerce-wunderkiste' ) . '</p>';
     }
 
     /**
-     * Checkbox-Feld rendern
+     * Render checkbox field
      */
     public function checkbox_field_callback( $args ) {
         $options = get_option( 'wpe_options', array() );
         $value   = isset( $options[ $args['id'] ] ) ? $options[ $args['id'] ] : 0;
         ?>
         <label>
-            <input type="checkbox" 
-                   name="wpe_options[<?php echo esc_attr( $args['id'] ); ?>]" 
-                   value="1" 
+            <input type="checkbox"
+                   name="wpe_options[<?php echo esc_attr( $args['id'] ); ?>]"
+                   value="1"
                    <?php checked( 1, $value ); ?>>
             <?php echo esc_html( $args['description'] ); ?>
         </label>
@@ -186,14 +186,14 @@ class WPE_Admin {
     }
 
     /**
-     * Textarea-Feld rendern
+     * Render textarea field
      */
     public function textarea_field_callback( $args ) {
         $options = get_option( 'wpe_options', array() );
         $value   = isset( $options[ $args['id'] ] ) ? $options[ $args['id'] ] : '';
         $rows    = isset( $args['rows'] ) ? $args['rows'] : 5;
         ?>
-        <textarea name="wpe_options[<?php echo esc_attr( $args['id'] ); ?>]" 
+        <textarea name="wpe_options[<?php echo esc_attr( $args['id'] ); ?>]"
                   id="<?php echo esc_attr( $args['id'] ); ?>"
                   rows="<?php echo esc_attr( $rows ); ?>"
                   class="large-text code"><?php echo esc_textarea( $value ); ?></textarea>
@@ -202,24 +202,20 @@ class WPE_Admin {
     }
 
     /**
-     * Optionen bereinigen
+     * Sanitize options
      */
     public function sanitize_options( $input ) {
         $sanitized = array();
 
-        // Checkboxen
+        // Checkboxes
         $sanitized['enable_price_on_request']    = ! empty( $input['enable_price_on_request'] ) ? 1 : 0;
         $sanitized['enable_disable_shipping']    = ! empty( $input['enable_disable_shipping'] ) ? 1 : 0;
         $sanitized['enable_product_accessories'] = ! empty( $input['enable_product_accessories'] ) ? 1 : 0;
         $sanitized['enable_image_resizer']       = ! empty( $input['enable_image_resizer'] ) ? 1 : 0;
-        
-        // Order Recovery
         $sanitized['enable_order_recovery']      = ! empty( $input['enable_order_recovery'] ) ? 1 : 0;
-
-        // NEU: Staffelpreise
         $sanitized['enable_tiered_pricing']      = ! empty( $input['enable_tiered_pricing'] ) ? 1 : 0;
 
-        // CSS (mit wp_strip_all_tags für Sicherheit, aber CSS-Syntax erlauben)
+        // CSS (with wp_strip_all_tags for security, but allowing CSS syntax)
         if ( isset( $input['price_on_request_css'] ) ) {
             $sanitized['price_on_request_css'] = wp_strip_all_tags( $input['price_on_request_css'] );
         }
@@ -228,19 +224,19 @@ class WPE_Admin {
     }
 
     /**
-     * Admin-Scripts und Styles laden
+     * Enqueue admin scripts and styles
      */
     public function enqueue_admin_scripts( $hook ) {
         if ( 'woocommerce_page_woo-product-extras' !== $hook ) {
             return;
         }
 
-        // CodeMirror für CSS-Editor
+        // CodeMirror for CSS editor
         wp_enqueue_code_editor( array( 'type' => 'text/css' ) );
         wp_enqueue_script( 'wp-theme-plugin-editor' );
         wp_enqueue_style( 'wp-codemirror' );
 
-        // Eigenes Admin-Script
+        // Custom admin script
         wp_add_inline_script( 'wp-theme-plugin-editor', "
             jQuery(document).ready(function($) {
                 if ($('#price_on_request_css').length) {
@@ -258,16 +254,16 @@ class WPE_Admin {
     }
 
     /**
-     * Settings-Link zur Plugin-Seite hinzufügen
+     * Add settings link to plugin page
      */
     public function add_settings_link( $links ) {
-        $settings_link = '<a href="' . admin_url( 'admin.php?page=woo-product-extras' ) . '">' . __( 'Einstellungen', 'woo-product-extras' ) . '</a>';
+        $settings_link = '<a href="' . admin_url( 'admin.php?page=woo-product-extras' ) . '">' . __( 'Settings', 'ecommerce-wunderkiste' ) . '</a>';
         array_unshift( $links, $settings_link );
         return $links;
     }
 
     /**
-     * Einstellungsseite rendern
+     * Render settings page
      */
     public function render_settings_page() {
         if ( ! current_user_can( 'manage_woocommerce' ) ) {
@@ -283,33 +279,33 @@ class WPE_Admin {
                 <?php
                 settings_fields( 'wpe_settings_group' );
                 do_settings_sections( 'woo-product-extras' );
-                submit_button( __( 'Einstellungen speichern', 'woo-product-extras' ) );
+                submit_button( __( 'Save Settings', 'ecommerce-wunderkiste' ) );
                 ?>
             </form>
 
             <hr>
-            <h2><?php esc_html_e( 'Anleitung', 'woo-product-extras' ); ?></h2>
+            <h2><?php esc_html_e( 'Instructions', 'ecommerce-wunderkiste' ); ?></h2>
             <div class="card" style="max-width: 800px; padding: 20px;">
-                <h3><?php esc_html_e( 'Preis auf Anfrage', 'woo-product-extras' ); ?></h3>
-                <p><?php esc_html_e( 'Nach Aktivierung erscheint bei jedem Produkt in der Seitenleiste eine Box "Preis auf Anfrage". Aktivieren Sie die Checkbox, um den Preis durch "Preis auf Anfrage" zu ersetzen und den Warenkorb-Button zu entfernen.', 'woo-product-extras' ); ?></p>
+                <h3><?php esc_html_e( 'Price on Request', 'ecommerce-wunderkiste' ); ?></h3>
+                <p><?php esc_html_e( 'After activation, a "Price on Request" box appears in the sidebar of each product. Enable the checkbox to replace the price with "Price on Request" and remove the add to cart button.', 'ecommerce-wunderkiste' ); ?></p>
 
-                <h3><?php esc_html_e( 'Versandarten deaktivieren', 'woo-product-extras' ); ?></h3>
-                <p><?php esc_html_e( 'Nach Aktivierung erscheint bei jedem Produkt in der Seitenleiste eine Box mit allen verfügbaren Versandarten. Wählen Sie die Versandarten aus, die für dieses Produkt NICHT verfügbar sein sollen.', 'woo-product-extras' ); ?></p>
+                <h3><?php esc_html_e( 'Disable Shipping Methods', 'ecommerce-wunderkiste' ); ?></h3>
+                <p><?php esc_html_e( 'After activation, a box with all available shipping methods appears in the sidebar of each product. Select the shipping methods that should NOT be available for this product.', 'ecommerce-wunderkiste' ); ?></p>
 
-                <h3><?php esc_html_e( 'Zubehör Tab', 'woo-product-extras' ); ?></h3>
-                <p><?php esc_html_e( 'Nach Aktivierung erscheint bei jedem Produkt in der Seitenleiste eine Box "Zubehör / Passende Produkte". Suchen Sie nach Produkten und wählen Sie die gewünschten aus. Im Frontend erscheint dann ein "Zubehör" Tab mit den verknüpften Produkten.', 'woo-product-extras' ); ?></p>
+                <h3><?php esc_html_e( 'Accessories Tab', 'ecommerce-wunderkiste' ); ?></h3>
+                <p><?php esc_html_e( 'After activation, an "Accessories / Related Products" box appears in the sidebar of each product. Search for products and select the desired ones. An "Accessories" tab with linked products will then appear in the frontend.', 'ecommerce-wunderkiste' ); ?></p>
 
-                <h3><?php esc_html_e( 'Image Resizer 800px/1200px', 'woo-product-extras' ); ?></h3>
-                <p><?php esc_html_e( 'Nach Aktivierung erscheint in der Mediathek (Listenansicht und Einzelansicht) Buttons zum Skalieren von Bildern auf maximal 800px oder 1200px. Das Originalbild wird dabei überschrieben. Qualität: 92% (hohe Qualität).', 'woo-product-extras' ); ?></p>
-                
-                <h3><?php esc_html_e( 'Order Recovery', 'woo-product-extras' ); ?></h3>
-                <p><?php esc_html_e( 'Vollautomatisch: Sendet eine E-Mail, wenn eine Zahlung 1 Stunde lang auf "Zahlung ausstehend" steht, oder sofort bei "Fehlgeschlagen". Fügt außerdem einen manuellen "Zahlungslink senden" Button in der Bestellübersicht hinzu.', 'woo-product-extras' ); ?></p>
+                <h3><?php esc_html_e( 'Image Resizer 800px/1200px', 'ecommerce-wunderkiste' ); ?></h3>
+                <p><?php esc_html_e( 'After activation, buttons appear in the media library (list view and single view) to resize images to a maximum of 800px or 1200px. The original image is overwritten. Quality: 92% (high quality).', 'ecommerce-wunderkiste' ); ?></p>
 
-                <h3><?php esc_html_e( 'Staffelpreise', 'woo-product-extras' ); ?></h3>
-                <p><?php esc_html_e( 'Definieren Sie individuelle Preise basierend auf der Bestellmenge. Die Preistabelle wird automatisch auf der Produktseite angezeigt.', 'woo-product-extras' ); ?></p>
+                <h3><?php esc_html_e( 'Order Recovery', 'ecommerce-wunderkiste' ); ?></h3>
+                <p><?php esc_html_e( 'Fully automatic: Sends an email when a payment has been pending for 1 hour, or immediately on failure. Also adds a manual "Send Payment Link" button in the order overview.', 'ecommerce-wunderkiste' ); ?></p>
 
-                <h3><?php esc_html_e( 'CSS Anpassung', 'woo-product-extras' ); ?></h3>
-                <p><?php esc_html_e( 'Nutzen Sie folgende CSS-Klasse für individuelle Styles:', 'woo-product-extras' ); ?></p>
+                <h3><?php esc_html_e( 'Tiered Pricing', 'ecommerce-wunderkiste' ); ?></h3>
+                <p><?php esc_html_e( 'Define individual prices based on order quantity. The price table is automatically displayed on the product page.', 'ecommerce-wunderkiste' ); ?></p>
+
+                <h3><?php esc_html_e( 'CSS Customization', 'ecommerce-wunderkiste' ); ?></h3>
+                <p><?php esc_html_e( 'Use the following CSS class for individual styles:', 'ecommerce-wunderkiste' ); ?></p>
                 <code>.price-on-request { color: #e74c3c; font-weight: bold; }</code>
             </div>
         </div>
