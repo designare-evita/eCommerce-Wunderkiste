@@ -116,16 +116,29 @@ class WPE_Order_Recovery {
         $order->add_order_note( '[Wunderkiste] Zahlungslink manuell versendet.', false, true );
     }
 
-    /**
-     * E-Mail Inhalt anpassen (optional)
+ /**
+     * E-Mail Inhalt anpassen: Gelbe Box mit Button und "Du"-Ansprache
      */
     public function add_custom_email_message( $order, $sent_to_admin, $plain_text, $email ) {
+        // Wir wollen das nur in der "Customer Invoice" Mail (Zahlungsaufforderung)
         if ( 'customer_invoice' === $email->id && ! $sent_to_admin ) {
-            echo '<p style="background:#fff3cd; color:#856404; padding:10px; border:1px solid #ffeeba; border-radius:3px;">';
-            echo '<strong>Hoppla, da hat etwas nicht geklappt!</strong><br>';
-            echo 'Es sieht so aus, als wäre der Zahlungsvorgang unterbrochen worden. ';
-            echo 'Keine Sorge, Ihre Bestellung ist gespeichert. Sie können die Zahlung hier direkt nachholen:';
-            echo '</p>';
+            
+            // Zahlungslink abrufen
+            $pay_url = $order->get_checkout_payment_url();
+
+            echo '<div style="background:#fff3cd; color:#856404; padding:20px; border:1px solid #ffeeba; border-radius:5px; margin-bottom:20px; text-align:center;">';
+            
+            echo '<p style="font-size: 16px; margin-top:0;"><strong>' . esc_html__( 'Deine Bestellung auf Hagebaumarkt Schuberth war leider nicht erfolgreich.', 'woo-product-extras' ) . '</strong></p>';
+            
+            echo '<p>' . esc_html__( 'Es sieht so aus, als wäre der Zahlungsvorgang unterbrochen worden. Keine Sorge, deine Bestellung ist gespeichert.', 'woo-product-extras' ) . '</p>';
+            
+            echo '<p>' . esc_html__( 'Du kannst die Zahlung hier direkt nachholen:', 'woo-product-extras' ) . '</p>';
+
+            // Der Button
+            echo '<a href="' . esc_url( $pay_url ) . '" style="background-color:#d9534f; color:#ffffff; display:inline-block; padding:12px 24px; text-decoration:none; border-radius:4px; font-weight:bold; margin: 10px 0;">' . esc_html__( '➔ Jetzt bezahlen', 'woo-product-extras' ) . '</a>';
+
+            echo '<p style="margin-bottom:0; font-size: 12px; color: #856404;">' . esc_html__( 'Die Details zu deiner Bestellung findest du unten.', 'woo-product-extras' ) . '</p>';
+            
+            echo '</div>';
         }
     }
-}
