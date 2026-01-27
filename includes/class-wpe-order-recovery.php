@@ -2,7 +2,14 @@
 /**
  * Order Recovery Modul
  *
- * Behandelt fehlgeschlagene Zahlungen und abgebrochene Zahlunsgvorgänge.
+ * Behandelt fehlgeschlagene Zahlungen und abgebrochene Zahlungsvorgänge.
+ * 
+ * ÄNDERUNGEN:
+ * - Hook geändert von 'woocommerce_order_status_pending' zu 'woocommerce_checkout_order_created'
+ *   (Der alte Hook feuerte nicht bei initialer Bestellerstellung, nur bei Statuswechsel)
+ * - Zusätzlicher Hook 'woocommerce_thankyou' als Fallback
+ * - Kontaktadresse: geizhals@schuberth.at
+ * - Debug-Logging hinzugefügt
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -11,9 +18,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WPE_Order_Recovery {
 
+    /**
+     * Kontakt-E-Mail für Kundenanfragen
+     */
+    private $contact_email = 'geizhals@schuberth.at';
+
     public function __construct() {
         // Szenario A: Check nach 1 Stunde bei "Zahlung ausstehend"
-        add_action( 'woocommerce_order_status_pending', array( $this, 'schedule_pending_check' ), 10, 2 );
+        // GEÄNDERT: Nutze checkout_order_created statt order_status_pending
+        add_action( 'woocommerce_checkout_order_created', array( $this, 'schedule_pending_check_on_create' ), 10, 1 );
+        
+        // Fallback: Auch bei thankyou-Page prüfen (falls Bestellung dort erst finalisiert wird)
+        add_action( 'woocommerce_thankyou', array( $this, 'schedule_pending_check_on_thankyou' ), 10, 1 );
+        
+        // Cron-Event Handler
         add_action( 'wpe_check_pending_order_event', array( $this, 'check_pending_order_status' ) );
 
         // Szenario B: Sofort-Mail bei Status "Fehlgeschlagen"
@@ -23,8 +41,11 @@ class WPE_Order_Recovery {
         add_filter( 'woocommerce_order_actions', array( $this, 'add_custom_order_action' ) );
         add_action( 'woocommerce_order_action_wpe_send_payment_link', array( $this, 'process_custom_order_action' ) );
 
-        // E-Mail Text anpassen (optional, um es freundlicher zu machen)
+        // E-Mail Text anpassen
         add_action( 'woocommerce_email_before_order_table', array( $this, 'add_custom_email_message' ), 10, 4 );
+        
+        // Cron-Intervall registrieren (falls noch nicht vorhanden)
+        add_filter( 'cron_schedules', array( $this, 'add_cron_interval' ) );
     }
 
     /**
@@ -36,50 +57,141 @@ class WPE_Order_Recovery {
     }
 
     /**
-     * SZENARIO A: Cronjob einplanen (1 Stunde)
+     * Cron-Intervall hinzufügen (optional, für zukünftige Nutzung)
      */
-    public function schedule_pending_check( $order_id, $order ) {
-        if ( ! wp_next_scheduled( 'wpe_check_pending_order_event', array( $order_id ) ) ) {
-            // Event in 1 Stunde (3600 Sekunden) einplanen
-            wp_schedule_single_event( time() + 3600, 'wpe_check_pending_order_event', array( $order_id ) );
+    public function add_cron_interval( $schedules ) {
+        $schedules['wpe_hourly'] = array(
+            'interval' => 3600,
+            'display'  => 'Einmal pro Stunde (WPE)',
+        );
+        return $schedules;
+    }
+
+    /**
+     * SZENARIO A (NEU): Cronjob bei Bestellerstellung einplanen
+     */
+    public function schedule_pending_check_on_create( $order ) {
+        if ( ! $order ) {
+            return;
+        }
+        
+        $order_id = $order->get_id();
+        
+        // Nur planen wenn Status pending oder on-hold ist
+        if ( ! $order->has_status( array( 'pending', 'on-hold' ) ) ) {
+            $this->log_debug( 'Order #' . $order_id . ' - Status ist nicht pending/on-hold, kein Cron geplant.' );
+            return;
+        }
+        
+        $this->schedule_pending_check( $order_id );
+    }
+
+    /**
+     * SZENARIO A (Fallback): Cronjob bei Thankyou-Page einplanen
+     */
+    public function schedule_pending_check_on_thankyou( $order_id ) {
+        if ( ! $order_id ) {
+            return;
+        }
+        
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return;
+        }
+        
+        // Nur planen wenn Status pending ist und noch kein Event existiert
+        if ( ! $order->has_status( 'pending' ) ) {
+            return;
+        }
+        
+        $this->schedule_pending_check( $order_id );
+    }
+
+    /**
+     * Hilfsfunktion: Cron-Event planen
+     */
+    private function schedule_pending_check( $order_id ) {
+        // Prüfen ob bereits geplant
+        if ( wp_next_scheduled( 'wpe_check_pending_order_event', array( $order_id ) ) ) {
+            $this->log_debug( 'Order #' . $order_id . ' - Cron bereits geplant.' );
+            return;
+        }
+        
+        // Event in 1 Stunde (3600 Sekunden) einplanen
+        $scheduled_time = time() + 3600;
+        $result = wp_schedule_single_event( $scheduled_time, 'wpe_check_pending_order_event', array( $order_id ) );
+        
+        if ( $result ) {
+            $this->log_debug( 'Order #' . $order_id . ' - Cron geplant für ' . date( 'Y-m-d H:i:s', $scheduled_time ) );
+        } else {
+            $this->log_debug( 'Order #' . $order_id . ' - FEHLER: Cron konnte nicht geplant werden!' );
         }
     }
 
     /**
      * SZENARIO A: Cronjob ausführen
-     * + NEU: Info-Mail an Admin
      */
     public function check_pending_order_status( $order_id ) {
         $order = wc_get_order( $order_id ); 
 
-        if ( ! $order ) return;
+        if ( ! $order ) {
+            $this->log_debug( 'Order #' . $order_id . ' - Bestellung nicht gefunden.' );
+            return;
+        }
 
-        // Wir prüfen, ob die Bestellung IMMER NOCH "pending" ist
+        $current_status = $order->get_status();
+        $this->log_debug( 'Order #' . $order_id . ' - Cron ausgeführt. Aktueller Status: ' . $current_status );
+
+        // Prüfen ob die Bestellung IMMER NOCH "pending" ist
         if ( $order->has_status( 'pending' ) ) {
             // 1. Sende die "Customer Invoice / Order Details" Mail (enthält Zahlungslink)
-            WC()->mailer()->get_emails()['WC_Email_Customer_Invoice']->trigger( $order_id );
+            $mailer = WC()->mailer();
+            $emails = $mailer->get_emails();
+            
+            if ( isset( $emails['WC_Email_Customer_Invoice'] ) ) {
+                $emails['WC_Email_Customer_Invoice']->trigger( $order_id );
+                $this->log_debug( 'Order #' . $order_id . ' - Erinnerungs-Mail an Kunden gesendet.' );
+            } else {
+                $this->log_debug( 'Order #' . $order_id . ' - FEHLER: WC_Email_Customer_Invoice nicht verfügbar!' );
+            }
             
             // 2. Notiz an der Bestellung hinterlassen
             $order->add_order_note( '[Wunderkiste] Automatische Erinnerungs-Mail nach 1 Std. gesendet.' );
 
             // 3. Info-Mail an Admin senden
             $this->send_admin_info_mail( $order, 'pending_recovery' );
+        } else {
+            $this->log_debug( 'Order #' . $order_id . ' - Status ist nicht mehr pending (' . $current_status . '), keine Mail gesendet.' );
         }
     }
 
     /**
      * SZENARIO B: Sofort bei "Failed"
-     * + NEU: Info-Mail an Admin
      */
     public function send_recovery_email_immediately( $order_id, $order ) {
+        $this->log_debug( 'Order #' . $order_id . ' - Status auf FAILED gewechselt.' );
+        
         // 1. Mail an Kunden senden (Zahlungsaufforderung)
-        WC()->mailer()->get_emails()['WC_Email_Customer_Invoice']->trigger( $order_id );
+        $mailer = WC()->mailer();
+        $emails = $mailer->get_emails();
+        
+        if ( isset( $emails['WC_Email_Customer_Invoice'] ) ) {
+            $emails['WC_Email_Customer_Invoice']->trigger( $order_id );
+            $this->log_debug( 'Order #' . $order_id . ' - Sofort-Mail an Kunden gesendet.' );
+        }
         
         // 2. Notiz im System hinterlegen
         $order->add_order_note( '[Wunderkiste] Sofortige Mail wegen fehlgeschlagener Zahlung gesendet.' );
 
         // 3. Info-Mail an Admin senden
         $this->send_admin_info_mail( $order, 'failed_recovery' );
+        
+        // 4. Geplantes Pending-Event löschen (falls vorhanden)
+        $timestamp = wp_next_scheduled( 'wpe_check_pending_order_event', array( $order_id ) );
+        if ( $timestamp ) {
+            wp_unschedule_event( $timestamp, 'wpe_check_pending_order_event', array( $order_id ) );
+            $this->log_debug( 'Order #' . $order_id . ' - Geplantes Pending-Event gelöscht.' );
+        }
     }
 
     /**
@@ -158,6 +270,7 @@ class WPE_Order_Recovery {
             $pay_url = $order->get_checkout_payment_url();
             $shop_name = get_bloginfo( 'name' );
             $lang = $this->get_language();
+            $contact_email = $this->contact_email;
 
             echo '<div style="background:#fff3cd; color:#856404; padding:20px; border:1px solid #ffeeba; border-radius:5px; margin-bottom:20px; text-align:center;">';
             
@@ -198,7 +311,25 @@ class WPE_Order_Recovery {
             }
             echo '</p>';
             
+            // Kontaktinformation hinzufügen
+            echo '<p style="margin-top: 15px; font-size: 12px; color: #856404; border-top: 1px solid #ffeeba; padding-top: 10px;">';
+            if ( $lang === 'en' ) {
+                printf( 'Questions? Contact us at: <a href="mailto:%s" style="color:#856404;">%s</a>', esc_attr( $contact_email ), esc_html( $contact_email ) );
+            } else {
+                printf( 'Fragen? Kontaktiere uns unter: <a href="mailto:%s" style="color:#856404;">%s</a>', esc_attr( $contact_email ), esc_html( $contact_email ) );
+            }
+            echo '</p>';
+            
             echo '</div>';
+        }
+    }
+
+    /**
+     * Debug-Logging Hilfsfunktion
+     */
+    private function log_debug( $message ) {
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG === true ) {
+            error_log( '[WPE Order Recovery] ' . $message );
         }
     }
 }
