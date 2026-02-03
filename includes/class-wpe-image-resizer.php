@@ -3,7 +3,7 @@
  * Image Resizer Module
  *
  * Resizes images to max 800px or 1200px width/height with high quality
- * Version: 2.3
+ * Version: 2.4 - Mit Live-Update und Bulk-Actions
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -34,6 +34,9 @@ class WPE_Image_Resizer {
         add_filter( 'manage_upload_columns', array( $this, 'add_list_column' ) );
         add_action( 'manage_media_custom_column', array( $this, 'fill_list_column' ), 10, 2 );
 
+        // Bulk Actions
+        add_filter( 'bulk_actions-upload', array( $this, 'add_bulk_actions' ) );
+
         // CSS for column width
         add_action( 'admin_head', array( $this, 'list_css' ) );
     }
@@ -50,7 +53,7 @@ class WPE_Image_Resizer {
         $metadata = wp_get_attachment_metadata( $post->ID );
         $current_size = '';
         if ( $metadata && isset( $metadata['width'] ) && isset( $metadata['height'] ) ) {
-            $current_size = '<span style="color:#666; font-size:12px;">' .
+            $current_size = '<span class="wpe-current-size" style="color:#666; font-size:12px;">' .
                 sprintf(
                     /* translators: %1$d: width in pixels, %2$d: height in pixels */
                     esc_html__( 'Current: %1$d × %2$d px', 'ecommerce-wunderkiste' ),
@@ -83,17 +86,34 @@ class WPE_Image_Resizer {
     }
 
     /**
+     * Add Bulk Actions to Media Library
+     */
+    public function add_bulk_actions( $bulk_actions ) {
+        $bulk_actions['wpe_bulk_800'] = __( '🖼️ Resize to 800px', 'ecommerce-wunderkiste' );
+        $bulk_actions['wpe_bulk_1200'] = __( '🖼️ Resize to 1200px', 'ecommerce-wunderkiste' );
+        return $bulk_actions;
+    }
+
+    /**
      * JavaScript for AJAX functionality
      */
     public function admin_footer_script() {
+        $screen = get_current_screen();
+        if ( ! $screen || ( $screen->base !== 'upload' && $screen->base !== 'post' && $screen->id !== 'attachment' ) ) {
+            return;
+        }
+
+        $bulk_nonce = wp_create_nonce( 'wpe_bulk_resize' );
         ?>
         <script type="text/javascript">
         jQuery(document).ready(function($) {
+            // Single Image Resize
             $(document).on('click', '.wpe-resize-trigger', function(e) {
                 e.preventDefault();
                 var button = $(this);
-                var container = button.closest('.wpe-resize-container, td, .setting');
-                var status = container.find('.wpe-resize-status').length ? container.find('.wpe-resize-status') : button.siblings('.wpe-resize-status');
+                var container = button.closest('.wpe-resize-container, td, .setting, .compat-field-wpe_resize');
+                var status = container.find('.wpe-resize-status');
+                var sizeDisplay = container.find('.wpe-current-size');
 
                 // Fallback for list view
                 if (status.length === 0) {
@@ -114,7 +134,7 @@ class WPE_Image_Resizer {
                 // Disable all buttons in this container
                 container.find('.wpe-resize-trigger').prop('disabled', true);
                 button.prop('disabled', true);
-                status.text(<?php echo wp_json_encode( __( 'Working...', 'ecommerce-wunderkiste' ) ); ?>).css('color', '#2271b1').show();
+                status.text('⏳ ' + <?php echo wp_json_encode( __( 'Working...', 'ecommerce-wunderkiste' ) ); ?>).css('color', '#2271b1').show();
 
                 $.ajax({
                     url: ajaxurl,
@@ -127,9 +147,20 @@ class WPE_Image_Resizer {
                     },
                     success: function(response) {
                         if (response.success) {
-                            status.text('✓ ' + response.data).css('color', 'green');
+                            status.text('✓ ' + <?php echo wp_json_encode( __( 'Done:', 'ecommerce-wunderkiste' ) ); ?> + ' ' + response.data.dimensions).css('color', 'green');
+                            
+                            // Update size display
+                            if (sizeDisplay.length) {
+                                sizeDisplay.html(<?php echo wp_json_encode( __( 'Current:', 'ecommerce-wunderkiste' ) ); ?> + ' <strong>' + response.data.dimensions + '</strong>');
+                            }
+                            
+                            // Re-enable buttons after 3 seconds
+                            setTimeout(function() {
+                                container.find('.wpe-resize-trigger').prop('disabled', false);
+                                status.fadeOut();
+                            }, 3000);
                         } else {
-                            status.text('✗ ' + (response.data || <?php echo wp_json_encode( __( 'Unknown', 'ecommerce-wunderkiste' ) ); ?>)).css('color', 'red');
+                            status.text('✗ ' + (response.data || <?php echo wp_json_encode( __( 'Unknown error', 'ecommerce-wunderkiste' ) ); ?>)).css('color', 'red');
                             container.find('.wpe-resize-trigger').prop('disabled', false);
                         }
                     },
@@ -138,6 +169,93 @@ class WPE_Image_Resizer {
                         container.find('.wpe-resize-trigger').prop('disabled', false);
                     }
                 });
+            });
+
+            // Bulk Action Handler
+            $(document).on('click', '#doaction, #doaction2', function(e) {
+                var action = $(this).prev('select').val();
+                if (action !== 'wpe_bulk_800' && action !== 'wpe_bulk_1200') return;
+                
+                e.preventDefault();
+                var size = action === 'wpe_bulk_800' ? 800 : 1200;
+                var checked = $('input[name="media[]"]:checked');
+                
+                if (checked.length === 0) {
+                    alert(<?php echo wp_json_encode( __( 'Please select at least one image.', 'ecommerce-wunderkiste' ) ); ?>);
+                    return;
+                }
+                
+                if (!confirm(<?php echo wp_json_encode( __( 'Resize selected images to', 'ecommerce-wunderkiste' ) ); ?> + ' ' + size + 'px? ' + <?php echo wp_json_encode( __( 'Originals will be overwritten!', 'ecommerce-wunderkiste' ) ); ?>)) {
+                    return;
+                }
+                
+                var ids = [];
+                checked.each(function() { ids.push($(this).val()); });
+                
+                // Progress Modal
+                var modal = $('<div id="wpe-bulk-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100000;display:flex;align-items:center;justify-content:center;">' +
+                    '<div style="background:#fff;padding:30px;border-radius:8px;max-width:500px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.3);">' +
+                    '<h2 style="margin:0 0 20px;color:#1d2327;">🖼️ ' + <?php echo wp_json_encode( __( 'Resizing images...', 'ecommerce-wunderkiste' ) ); ?> + '</h2>' +
+                    '<div class="wpe-progress-bar" style="background:#ddd;height:24px;border-radius:12px;overflow:hidden;margin-bottom:15px;">' +
+                    '<div class="wpe-progress-fill" style="background:linear-gradient(90deg,#2271b1,#135e96);height:100%;width:0%;transition:width 0.3s;"></div></div>' +
+                    '<div class="wpe-progress-text" style="text-align:center;font-size:14px;color:#50575e;">0 / ' + ids.length + '</div>' +
+                    '<div class="wpe-progress-log" style="max-height:200px;overflow-y:auto;margin-top:15px;font-size:12px;background:#f6f7f7;padding:10px;border-radius:4px;"></div>' +
+                    '</div></div>');
+                $('body').append(modal);
+                
+                var processed = 0, success = 0, errors = 0;
+                var progressFill = modal.find('.wpe-progress-fill');
+                var progressText = modal.find('.wpe-progress-text');
+                var progressLog = modal.find('.wpe-progress-log');
+                
+                function processNext(index) {
+                    if (index >= ids.length) {
+                        // Done
+                        progressText.html('<strong style="color:#00a32a;">✓ ' + <?php echo wp_json_encode( __( 'Done!', 'ecommerce-wunderkiste' ) ); ?> + '</strong> ' + success + ' ' + <?php echo wp_json_encode( __( 'successful', 'ecommerce-wunderkiste' ) ); ?> + ', ' + errors + ' ' + <?php echo wp_json_encode( __( 'errors', 'ecommerce-wunderkiste' ) ); ?>);
+                        setTimeout(function() {
+                            modal.fadeOut(300, function() { 
+                                $(this).remove(); 
+                                location.reload(); 
+                            });
+                        }, 2000);
+                        return;
+                    }
+                    
+                    var id = ids[index];
+                    var row = $('input[name="media[]"][value="' + id + '"]').closest('tr');
+                    var title = row.find('.title a').text() || row.find('.column-title strong').text() || 'ID: ' + id;
+                    
+                    $.post(ajaxurl, {
+                        action: 'wpe_resize_image',
+                        attachment_id: id,
+                        target_size: size,
+                        security: '<?php echo esc_js( $bulk_nonce ); ?>',
+                        is_bulk: true
+                    }, function(r) {
+                        processed++;
+                        var percent = Math.round((processed / ids.length) * 100);
+                        progressFill.css('width', percent + '%');
+                        progressText.text(processed + ' / ' + ids.length);
+                        
+                        if (r.success) {
+                            success++;
+                            progressLog.prepend('<div style="color:#00a32a;margin-bottom:3px;">✓ ' + title + ' → ' + r.data.dimensions + '</div>');
+                        } else {
+                            errors++;
+                            progressLog.prepend('<div style="color:#d63638;margin-bottom:3px;">✗ ' + title + ': ' + (r.data || 'Error') + '</div>');
+                        }
+                        
+                        // Next image after short delay
+                        setTimeout(function() { processNext(index + 1); }, 200);
+                    }).fail(function() {
+                        processed++;
+                        errors++;
+                        progressLog.prepend('<div style="color:#d63638;margin-bottom:3px;">✗ ' + title + ': Connection error</div>');
+                        setTimeout(function() { processNext(index + 1); }, 200);
+                    });
+                }
+                
+                processNext(0);
             });
         });
         </script>
@@ -150,16 +268,27 @@ class WPE_Image_Resizer {
     public function ajax_resize_image() {
         $attachment_id = isset( $_POST['attachment_id'] ) ? intval( $_POST['attachment_id'] ) : 0;
         $target_size = isset( $_POST['target_size'] ) ? intval( $_POST['target_size'] ) : 800;
+        $is_bulk = isset( $_POST['is_bulk'] ) && $_POST['is_bulk'];
 
         // Validate allowed sizes
         if ( ! in_array( $target_size, $this->allowed_sizes, true ) ) {
             $target_size = 800;
         }
 
-        check_ajax_referer( 'wpe_resize_' . $attachment_id, 'security' );
+        // Verify nonce - different for single vs bulk
+        if ( $is_bulk ) {
+            check_ajax_referer( 'wpe_bulk_resize', 'security' );
+        } else {
+            check_ajax_referer( 'wpe_resize_' . $attachment_id, 'security' );
+        }
 
         if ( ! current_user_can( 'upload_files' ) ) {
             wp_send_json_error( __( 'No permission.', 'ecommerce-wunderkiste' ) );
+        }
+
+        // Check if it's an image
+        if ( ! wp_attachment_is_image( $attachment_id ) ) {
+            wp_send_json_error( __( 'Not an image.', 'ecommerce-wunderkiste' ) );
         }
 
         $path = get_attached_file( $attachment_id );
@@ -202,9 +331,12 @@ class WPE_Image_Resizer {
 
         // Get new size for feedback
         $new_size = $editor->get_size();
-        $feedback = sprintf( '%d×%dpx (92%% qual.)', $new_size['width'], $new_size['height'] );
-
-        wp_send_json_success( $feedback );
+        
+        wp_send_json_success( array(
+            'dimensions' => $new_size['width'] . ' × ' . $new_size['height'] . ' px',
+            'width'      => $new_size['width'],
+            'height'     => $new_size['height'],
+        ) );
     }
 
     /**
@@ -225,11 +357,23 @@ class WPE_Image_Resizer {
 
         if ( wp_attachment_is_image( $post_id ) ) {
             $nonce = wp_create_nonce( 'wpe_resize_' . $post_id );
+            $metadata = wp_get_attachment_metadata( $post_id );
+            
+            // Show current size
+            $current_size = '';
+            if ( $metadata && isset( $metadata['width'] ) ) {
+                $current_size = '<span class="wpe-current-size" style="font-size:11px;color:#666;display:block;margin-bottom:4px;">' . 
+                    $metadata['width'] . '×' . $metadata['height'] . '</span>';
+            }
+            
+            echo $current_size;
             echo '<div class="wpe-resize-container" style="display: flex; gap: 4px; flex-wrap: wrap;">';
             echo '<button type="button" class="button button-small wpe-resize-trigger" data-id="' . esc_attr( $post_id ) . '" data-size="800" data-nonce="' . esc_attr( $nonce ) . '" title="' . esc_attr__( 'Resize to 800px', 'ecommerce-wunderkiste' ) . '">800</button>';
             echo '<button type="button" class="button button-small wpe-resize-trigger" data-id="' . esc_attr( $post_id ) . '" data-size="1200" data-nonce="' . esc_attr( $nonce ) . '" title="' . esc_attr__( 'Resize to 1200px', 'ecommerce-wunderkiste' ) . '">1200</button>';
             echo '</div>';
             echo '<span class="wpe-resize-status" style="display:block; font-size:11px; margin-top:2px;"></span>';
+        } else {
+            echo '<span style="color:#999;">—</span>';
         }
     }
 
@@ -240,6 +384,7 @@ class WPE_Image_Resizer {
         echo '<style>
             .column-wpe_resizer { width: 120px; }
             .wpe-resize-container .button { min-width: 45px; padding: 0 8px; }
+            .wpe-current-size strong { color: #1d2327; }
         </style>';
     }
 }
